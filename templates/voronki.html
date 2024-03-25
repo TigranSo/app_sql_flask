@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<button class="btn btn-success" id="toggleView">Переключить на графики</button><br>
+
+<div id="tableView">
+    <table border="1">
+        <tr>
+            <th>Фото</th>
+            <th>Артикул/Категория</th>
+            <th>Поля</th>
+            {% for date in dates %}
+            <th>{{ date }}</th>
+            {% endfor %}
+        </tr>
+        {% for item in items %}
+        <tr class="product-row">
+            <td rowspan="14"> 
+                <img src="{{ item.image }}" alt="Product Image" height="100">
+            </td>
+            <td rowspan="14">{{ item.nmId }}</td>
+            <td>Количество заказов</td>
+            {% for date in dates %}
+                <td>{{ item.orders_data[date] }}</td>
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Чистая прибыль</td>
+            {% for date in dates %}
+                <td>{{ item.net_profits[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Прибыль без учета рекламы</td>
+            {% for date in dates %}
+                <td>{{ item.profits_without_ads[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Расходы на рекламу</td>
+            {% for date in dates %}
+                <td>{{ item.ad_spending[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Количество рекламных показов</td>
+            {% for date in dates %}
+                <td>{{ item.ad_views[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Количество рекламных кликов</td>
+            {% for date in dates %}
+                <td>{{ item.ad_licks[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Общее количество кликов</td>
+            {% for date in dates %}
+                <td>{{ item.ad_licks_all[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>CTR</td>
+            {% for date in dates %}
+                <td>{{ item.ad_licks_licks_views[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>CPC</td>
+            {% for date in dates %}
+                <td>{{ item.ad_licks_tik[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Конверсия в корзину</td>
+            {% for date in dates %}
+                <td>{{ item.ad_licks_stats[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Конверсия в заказ</td>
+            {% for date in dates %}
+                <td>{{ item.conversion_to_order[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Конверсия в выкуп</td>
+            {% for date in dates %}
+                <td>{{ item.conversion_to_purchase[date] }}</td> 
+            {% endfor %}
+        </tr>
+
+        <tr>
+            <td>Cклады с наличием</td>
+            {% for date in dates %}
+                <td>{{ item.warehouses_with_stock[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Изменения</td>
+            {% for date in dates %}
+                <td>{{ item.changes_data[date] }}</td> 
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div id="chartsContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// jinja to json
+var items = {{ items | tojson | safe }};
+var dates = {{ dates | tojson | safe }};
+
+function scaleData(dataArray) {
+    return dataArray / 1000;
+}
+
+function generateChartsForItems(items, dates) {
+    var chartsContainer = document.getElementById('chartsContainer');
+
+    items.forEach(function(item, index) {
+        var chartContainerId = `chartContainer${index}`;
+        var chartContainerHtml = `
+            <div id="${chartContainerId}" class="chart-container">
+                <div class="chart-info">
+                    <img src="${item.image}" alt="Product Image" width="50" height="50">
+                    <p>${item.nmId}</p>
+                </div>
+                <canvas width="400" height="200"></canvas>
+            </div>
+        `;
+        chartsContainer.insertAdjacentHTML('beforeend', chartContainerHtml);
+
+        //Чистая прибыль
+        var sortedDates = Object.keys(item.net_profits).reverse();
+        var scaledNetProfits = sortedDates.map(date => item.net_profits[date] / 1000);
+
+        //Расходы на рекламу
+        var sortedDatesSpending = Object.keys(item.ad_spending).reverse();
+        var scaledNetSpending = sortedDatesSpending.map(date => item.ad_spending[date] / 1000);
+        
+        //Прибыль без учета рекламы
+        var sortedDatesWithout = Object.keys(item.profits_without_ads).reverse();
+        var scaledNetWithout = sortedDatesWithout.map(date => item.profits_without_ads[date] / 1000);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////
+
+        //Количество рекламных показов
+        var sortedDatesWiews = Object.keys(item.ad_views).reverse();
+        var scaledNetAdviews = sortedDatesWiews.map(date => item.ad_views[date] / 1000);
+
+        //Количество рекламных кликов
+        var sortedDatesLikes = Object.keys(item.ad_licks).reverse();
+        var scaledNetAdlikes = sortedDatesLikes.map(date => item.ad_licks[date] / 1000);
+        
+        //Общее количество кликов
+        var sortedDatesLikesa = Object.keys(item.ad_licks_all).reverse();
+        var scaledNetWithoutLikesAll = sortedDatesLikesa.map(date => item.ad_licks_all[date] / 1000);
+        
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //CTR
+        var sortedDatesT = Object.keys(item.ad_licks_licks_views).reverse();
+        var scaledNetAdviewsT = sortedDatesT.map(date => item.ad_licks_licks_views[date] * 1);
+
+        //Конверсия в корзину
+        var sortedDatesI = Object.keys(item.ad_licks_stats).reverse();
+        var scaledNetAdlikesI = sortedDatesI.map(date => item.ad_licks_stats[date] * 1);
+        
+        //конверсия в заказ
+        var sortedDatesK = Object.keys(item.conversion_to_order).reverse();
+        var scaledNetWithoutLikesAllK = sortedDatesK.map(date => item.conversion_to_order[date] * 1);
+
+        //конверсия в выкуп
+        var sortedDatesO = Object.keys(item.conversion_to_purchase).reverse();
+        var scaledNetWithoutLikesAllO = sortedDatesO.map(date => item.conversion_to_purchase[date] * 1);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////
+
+        var changesData = dates.map(date => {
+            if(item.changes_data.hasOwnProperty(date) && item.changes_data[date] !== 'нет') {
+                return 1; // Изменения есть
+            } else {
+                return NaN; // Изменений нет
+            }
+        });
+
+
+        var canvas = document.querySelector(`#${chartContainerId} canvas`);
+        var ctx = canvas.getContext('2d');
+        
+        var chartData = {
+            labels: dates,
+            datasets: [
+                {
+                    label: 'Количество заказов',
+                    data: item.orders_data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Чистая прибыль (x1000)',
+                    data: scaledNetProfits,
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Расходы на рекламу (x1000)',
+                    data: scaledNetSpending,
+                    borderColor: 'rgb(255, 159, 64)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Прибыль без учета рекламы (x1000)',
+                    data: scaledNetWithout,
+                    borderColor: 'rgb(54, 162, 235)',
+                    tension: 0.1
+                },
+                ///////////////////////////////////
+                {
+                    label: 'Количество рекламных показов (x100)',
+                    data: scaledNetAdviews,
+                    borderColor: 'rgb(153, 102, 255)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Количество рекламных кликов (x100)',
+                    data: scaledNetAdlikes,
+                    borderColor: 'rgb(201, 203, 207)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Общее количество кликов (x100)',
+                    data: scaledNetWithoutLikesAll,
+                    borderColor: 'rgb(255, 205, 86)',
+                    tension: 0.1
+                },
+                //////////////////////////////////////////
+                {
+                    label: 'CTR',
+                    data: scaledNetAdviewsT,
+                    borderColor: 'rgb(204, 42, 66)',
+                    tension: 0.1
+                },
+                {
+                    label: 'CPC',
+                    data: item.ad_licks_tik,
+                    borderColor: 'rgb(0, 5, 38)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Конверсия в корзину',
+                    data: scaledNetAdlikesI,
+                    borderColor: 'rgb(139, 198, 71)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Конверсия в заказ',
+                    data: scaledNetWithoutLikesAllK,
+                    borderColor: 'rgb(248, 142, 254)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Конверсия в выкуп',
+                    data: scaledNetWithoutLikesAllO,
+                    borderColor: 'rgb(0, 210, 252)',
+                    tension: 0.1
+                },
+                /////////////////////////////////////////////////
+                {
+                    label: 'Склады с наличием',
+                    data: item.warehouses_with_stock,
+                    borderColor: 'rgb(255, 247, 194)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Изменения',
+                    data: changesData.map((value, index) => ({
+                        x: dates[index], 
+                        y: value === 1 ? 1 : NaN, 
+                        r: value === 1 ? 5 : 0, 
+                    })),
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    type: 'bubble',
+                }
+
+
+            ]
+        };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    generateChartsForItems(items, dates);
+});
+</script>
+
+<script>
+    document.getElementById('toggleView').addEventListener('click', function() {
+    var tableView = document.getElementById('tableView');
+    var chartView = document.getElementById('chartView');
+
+    if (tableView.style.display === 'none') {
+        tableView.style.display = 'block';
+        chartView.style.display = 'none';
+        this.textContent = 'Переключить на графики';
+    } else {
+        tableView.style.display = 'none';
+        chartView.style.display = 'block';
+        this.textContent = 'Переключить на таблицу';
+        renderCharts();
+    }
+});
+</script>
+
+{% endblock %}
+

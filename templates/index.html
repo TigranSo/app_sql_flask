@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <form action="{{ url_for('index') }}" method="get">
+        <label for="start_date">Начальная дата:</label>
+        <input type="date" id="start_date" name="start_date" max="{{ today }}">
+
+        <label for="end_date">Конечная дата:</label>
+        <input type="date" id="end_date" name="end_date" max="{{ today }}">
+
+        <input type="submit" value="Применить">
+    </form>
+
+    <table border="1">
+        <tr>
+            <th>Фото/Артикул</th>
+            <th>Среднее при наличие общее</th>
+            <th>KPI</th>
+            <th>Текущий остаток</th>
+            <th>Проблемные склады (за 14 дней)</th>
+            <th>Поля</th>
+            {% for date in dates %}
+            <th>{{ date }}</th>
+            {% endfor %}
+        </tr>
+        {% for item in items %}
+        <tr class="product-row">
+            <td rowspan="3">
+                <img src="{{ item.image }}" alt="Product Image" height="100">
+                {{ item.nmId }}
+            </td>
+            <td rowspan="3">{{ item.average_orders }}</td>
+            <td rowspan="3">{{ item.KPI }}</td>
+            <td rowspan="3">{{ item.current_stock }}</td>
+            <td rowspan="3">{{ ", ".join(item.problematic_warehouses) }}</td>
+            <td>Заказы:</td>
+            {% for date in dates %}
+            <td>{{ item.orders_data[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>ROI:</td>
+            {% for date in dates %}
+            <td>{{ item.roi_data[date] }}</td> 
+            {% endfor %}
+        </tr>
+        <tr>
+            <td>Изменения:</td>
+            {% for date in dates %}
+            <td>{{ item.changes_data[date] }}</td> 
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
